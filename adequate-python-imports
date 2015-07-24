@@ -1,0 +1,95 @@
+#!/usr/bin/python
+# encoding=UTF-8
+
+# Copyright © 2015 Jakub Wilk <jwilk@debian.org>
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the “Software”), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+from __future__ import print_function
+
+import argparse
+import importlib
+import os
+import re
+import sys
+import sysconfig
+
+sys_path = sorted(
+    (p for p in sys.path if p.startswith('/')),
+    key=len,
+    reverse=True
+)
+sys_path_re = re.compile(
+    '^(?:' +
+    '|'.join(re.escape(p.rstrip('/')) for p in sys_path) +
+    ')/(.+)$'
+)
+mod_suffix_re = re.compile(
+    '(.*?)(?:' +
+    '[.]py|' +
+    '(?:[.]' + sysconfig.get_config_var('MULTIARCH') + ')?[.]so' +
+    ')$'
+)
+public_mod_re = re.compile(
+    r'^[^\W_]\w*(/[^\W_]\w*)*$'
+)
+
+blacklist = set(['antigravity'])
+
+def path2mod(path):
+    m = sys_path_re.match(path)
+    if m is None:
+        return
+    m = mod_suffix_re.match(m.group(1))
+    if m is None:
+        return
+    s = m.group(1)
+    if s.endswith('/__init__'):
+        s = s[:-9]
+    if not public_mod_re.match(s):
+        return
+    return s.replace('/', '.')
+
+def test_mod(mod):
+    if mod in blacklist:
+        return
+    try:
+        importlib.import_module(mod)
+    except KeyboardInterrupt as exc:
+        raise
+    except BaseException as exc:
+        print('{mod}: {exc}'.format(mod=mod, exc=exc))
+
+def main():
+    ap = argparse.ArgumentParser(usage='dpkg -L <package> | %(prog)s')
+    if sys.stdin.isatty():
+        ap.error('stdin is a tty')
+    for line in sys.stdin:
+        path = line.rstrip('\n')
+        if not os.path.isfile(path):
+            continue
+        mod = path2mod(path)
+        if mod is None:
+            continue
+        test_mod(mod)
+
+if __name__ == '__main__':
+    main()
+
+# vim:ts=4 sts=4 sw=4 et
