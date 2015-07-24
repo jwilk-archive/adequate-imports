@@ -115,19 +115,24 @@ def test_mod(mod):
             msg = msg.decode(sys.stdout.encoding, 'replace')
         pid, status = os.waitpid(pid, 0)
         reason = None
+        msg = msg.splitlines()
         if status != 0:
             sig = status & 0xFF
             if sig:
                 reason = 'killed by {sig}'.format(sig=signal_names.get(sig, sig))
             else:
-                reason = 'exit code {n}'.format(n=(status >> 8))
-        elif msg != '':
-            reason = 'non-empty stdout/stderr'
+                n = (status >> 8)
+                if n == 1 and msg[-1].startswith('ImportError: No module named '):
+                    reason = msg[-1]
+                    msg = []
+                else:
+                    reason = 'exit code {n}'.format(n=n)
         if reason:
             print('{mod}: {msg}'.format(mod=mod, msg=reason))
-            for line in msg.splitlines():
+            for line in msg:
                 print('|', line)
-            print()
+            if msg:
+                print()
 
 def main():
     ap = argparse.ArgumentParser(usage='dpkg -L <package> | %(prog)s')
