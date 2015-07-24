@@ -133,10 +133,7 @@ def test_mod(mod):
             if msg:
                 print()
 
-def main():
-    ap = argparse.ArgumentParser(usage='dpkg -L <package> | %(prog)s')
-    if sys.stdin.isatty():
-        ap.error('stdin is a tty')
+def modules_from_stdin():
     for line in sys.stdin:
         path = line.rstrip('\n')
         if not os.path.isfile(path):
@@ -144,6 +141,13 @@ def main():
         mod = path2mod(path)
         if mod is None:
             continue
+        yield mod
+
+def main():
+    ap = argparse.ArgumentParser(usage='dpkg -L <package> | %(prog)s')
+    if sys.stdin.isatty():
+        ap.error('stdin is a tty')
+    for mod in sorted(modules_from_stdin()):
         test_mod(mod)
 
 if __name__ == '__main__':
