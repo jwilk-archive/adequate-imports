@@ -51,7 +51,8 @@ public_mod_re = re.compile(
 )
 
 blacklist = {
-    'antigravity'  # spawns a web browser
+    'antigravity',  # spawns a web browser
+    'pychecker2',  # runs checks over the code oO
 }
 
 def path2mod(path):
@@ -69,8 +70,9 @@ def path2mod(path):
     return s.replace('/', '.')
 
 def test_mod(mod):
-    if mod in blacklist:
-        return
+    for bmod in blacklist:
+        if mod == bmod or mod.startswith(bmod + '.'):
+            return
     try:
         importlib.import_module(mod)
     except KeyboardInterrupt as exc:
