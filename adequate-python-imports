@@ -24,6 +24,7 @@
 from __future__ import print_function
 
 import argparse
+import imp
 import importlib
 import os
 import re
@@ -41,10 +42,10 @@ sys_path_re = re.compile(
     '|'.join(re.escape(p.rstrip('/')) for p in sys_path) +
     ')/(.+)$'
 )
+all_suffixes = set(x[0] for x in imp.get_suffixes())
 mod_suffix_re = re.compile(
     '(.*?)(?:' +
-    '[.]py|' +
-    '(?:[.]' + sysconfig.get_config_var('MULTIARCH') + ')?[.]so' +
+    '|'.join(re.escape(x) for x in all_suffixes) +
     ')$'
 )
 public_mod_re = re.compile(
