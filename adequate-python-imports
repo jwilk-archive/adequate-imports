@@ -114,7 +114,7 @@ def test_mod(mod):
     sys.stdout.flush()
     pid = os.fork()
     if pid == 0:
-        # child
+        # child:
         os.close(readfd)
         os.dup2(writefd, 1)
         os.dup2(writefd, 2)
@@ -125,7 +125,7 @@ def test_mod(mod):
             raise ImportError('attempted to raise {exc}'.format(exc=type(exc).__name__))
         sys.exit(0)
     else:
-        # parent
+        # parent:
         os.close(writefd)
         with os.fdopen(readfd, 'rb') as fp:
             msg = fp.read()
