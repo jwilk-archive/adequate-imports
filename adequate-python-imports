@@ -51,7 +51,7 @@ public_mod_re = re.compile(
 )
 
 blacklist = {
-    'antigravity'  # spawn a web browser
+    'antigravity'  # spawns a web browser
 }
 
 def path2mod(path):
