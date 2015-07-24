@@ -103,7 +103,10 @@ def test_mod(mod):
         os.dup2(writefd, 1)
         os.dup2(writefd, 2)
         os.close(writefd)
-        importlib.import_module(mod)
+        try:
+            importlib.import_module(mod)
+        except SystemExit as exc:
+            raise ImportError('attempted to raise {exc}'.format(exc=type(exc).__name__))
         sys.exit(0)
     else:
         # parent
