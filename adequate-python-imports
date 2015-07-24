@@ -54,7 +54,6 @@ public_mod_re = re.compile(
 
 blacklist = {
     'antigravity',  # spawns a web browser
-    'pychecker2',  # runs checks over the code oO
 }
 
 def path2mod(path):
