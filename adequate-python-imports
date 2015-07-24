@@ -52,11 +52,26 @@ public_mod_re = re.compile(
     r'^[^\W_]\w*(/[^\W_]\w*)*$'
 )
 
-blacklist = {
-    'antigravity',  # spawns a web browser
-}
 
-failed = set()
+class Blacklist(object):
+
+    def __init__(self, *mods):
+        self._blacklist = set(mods)
+
+    def add(self, mod):
+        self._blacklist.add(mod)
+
+    def __contains__(self, mod):
+        xmod = mod.split('.')
+        for i in range(len(xmod)):
+            mod = '.'.join(xmod[0:i+1])
+            if mod in self._blacklist:
+                return True
+        return False
+
+blacklist = Blacklist(
+    'antigravity',  # spawns a web browser
+)
 
 def path2mod(path):
     m = sys_path_re.match(path)
@@ -93,9 +108,8 @@ def _get_signal_names():
 signal_names = _get_signal_names()
 
 def test_mod(mod):
-    for bmod in (blacklist | failed):
-        if mod == bmod or mod.startswith(bmod + '.'):
-            return
+    if mod in blacklist:
+        return
     readfd, writefd = os.pipe()
     sys.stdout.flush()
     pid = os.fork()
@@ -131,7 +145,7 @@ def test_mod(mod):
                     msg = []
                 else:
                     reason = 'exit code {n}'.format(n=n)
-            failed.add(mod)
+            blacklist.add(mod)
         if reason:
             print('{mod}: {msg}'.format(mod=mod, msg=reason))
             for line in msg:
