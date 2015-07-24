@@ -87,7 +87,7 @@ def _get_signal_names():
             del data['SIGCLD']
     except KeyError:
         pass
-    return dict((no, name) for name, no in data.iteritems())
+    return dict((no, name) for name, no in data.items())
 
 signal_names = _get_signal_names()
 
@@ -111,6 +111,8 @@ def test_mod(mod):
         os.close(writefd)
         with os.fdopen(readfd, 'rb') as fp:
             msg = fp.read()
+        if not isinstance(msg, str):
+            msg = msg.decode(sys.stdout.encoding, 'replace')
         pid, status = os.waitpid(pid, 0)
         reason = None
         if status != 0:
