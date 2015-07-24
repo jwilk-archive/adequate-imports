@@ -78,6 +78,8 @@ def test_mod(mod):
     except KeyboardInterrupt as exc:
         raise
     except BaseException as exc:
+        if isinstance(exc, SystemExit):
+            exc = type(exc).__name__
         print('{mod}: {exc}'.format(mod=mod, exc=exc))
 
 def main():
