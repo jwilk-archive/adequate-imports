@@ -95,6 +95,7 @@ def test_mod(mod):
         if mod == bmod or mod.startswith(bmod + '.'):
             return
     readfd, writefd = os.pipe()
+    sys.stdout.flush()
     pid = os.fork()
     if pid == 0:
         # child
