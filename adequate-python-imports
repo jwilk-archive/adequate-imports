@@ -121,7 +121,7 @@ def test_mod(mod):
                 reason = 'killed by {sig}'.format(sig=signal_names.get(sig, sig))
             else:
                 n = (status >> 8)
-                if n == 1 and msg[-1].startswith('ImportError: No module named '):
+                if n == 1 and msg[-1].startswith(('ImportError: No module named ', 'ImportError: cannot import name ')):
                     reason = msg[-1]
                     msg = []
                 else:
