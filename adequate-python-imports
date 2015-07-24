@@ -27,6 +27,7 @@ import argparse
 import importlib
 import os
 import re
+import signal
 import sys
 import sysconfig
 
@@ -69,18 +70,60 @@ def path2mod(path):
         return
     return s.replace('/', '.')
 
+def _get_signal_names():
+    data = dict(
+        (name, getattr(signal, name))
+        for name in dir(signal)
+        if re.match('^SIG[A-Z0-9]*$', name)
+    )
+    try:
+        if data['SIGABRT'] == data['SIGIOT']:
+            del data['SIGIOT']
+    except KeyError:
+        pass
+    try:
+        if data['SIGCHLD'] == data['SIGCLD']:
+            del data['SIGCLD']
+    except KeyError:
+        pass
+    return dict((no, name) for name, no in data.iteritems())
+
+signal_names = _get_signal_names()
+
 def test_mod(mod):
     for bmod in blacklist:
         if mod == bmod or mod.startswith(bmod + '.'):
             return
-    try:
+    readfd, writefd = os.pipe()
+    pid = os.fork()
+    if pid == 0:
+        # child
+        os.close(readfd)
+        os.dup2(writefd, 1)
+        os.dup2(writefd, 2)
+        os.close(writefd)
         importlib.import_module(mod)
-    except KeyboardInterrupt as exc:
-        raise
-    except BaseException as exc:
-        if isinstance(exc, SystemExit):
-            exc = type(exc).__name__
-        print('{mod}: {exc}'.format(mod=mod, exc=exc))
+        sys.exit(0)
+    else:
+        # parent
+        os.close(writefd)
+        with os.fdopen(readfd, 'rb') as fp:
+            msg = fp.read()
+        pid, status = os.waitpid(pid, 0)
+        reason = None
+        if status != 0:
+            sig = status & 0xFF
+            if sig:
+                reason = 'killed by {sig}'.format(sig=signal_names.get(sig, sig))
+            else:
+                reason = 'exit code {n}'.format(n=(status >> 8))
+        elif msg != '':
+            reason = 'non-empty stdout/stderr'
+        if reason:
+            print('{mod}: {msg}'.format(mod=mod, msg=reason))
+            for line in msg.splitlines():
+                print('|', line)
+            print()
 
 def main():
     ap = argparse.ArgumentParser(usage='dpkg -L <package> | %(prog)s')
