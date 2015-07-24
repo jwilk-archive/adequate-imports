@@ -50,7 +50,9 @@ public_mod_re = re.compile(
     r'^[^\W_]\w*(/[^\W_]\w*)*$'
 )
 
-blacklist = set(['antigravity'])
+blacklist = {
+    'antigravity'  # spawn a web browser
+}
 
 def path2mod(path):
     m = sys_path_re.match(path)
