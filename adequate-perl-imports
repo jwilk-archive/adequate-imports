@@ -1,0 +1,107 @@
+#!/usr/bin/perl
+
+# Copyright © 2015 Jakub Wilk <jwilk@debian.org>
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the “Software”), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+use strict;
+use warnings;
+
+use v5.14;
+
+use Cwd qw();
+use English qw(-no_match_vars);
+
+my @inc = map { m{^/} ? Cwd::realpath($_) : undef } @INC;
+@inc = grep { defined($_) } @inc;
+my $inc_re = join('|', map { quotemeta $_ } @inc);
+
+sub path2mod
+{
+    local ($_) = @_;
+    s{^(?:$inc_re)/}{} or return;
+    s{[.]pmc?$}{} or return;
+    m{^\w+(/\w+)*$} or return;
+    s{/}{::}g;
+    return $_;
+}
+
+sub testmod
+{
+    my ($mod) = @_;
+    my $rc = pipe(my $readfh, my $writefh) or die $ERRNO;
+    my $pid = fork;
+    defined $pid or die "fork failed: $ERRNO";
+    if ($pid == 0) {
+        # child:
+        close($readfh);
+        open(STDOUT, '>&', $writefh) or die "cannot redirect STDOUT: $ERRNO";
+        open(STDERR, '>&', $writefh) or die "cannot redirect STDERR: $ERRNO";
+        close($writefh) or die "close failed: $ERRNO";
+        eval("use $mod; 1");
+        if ($@) {
+            die $@;
+        }
+        exit(0);
+    } else {
+        # parent:
+        local $RS = undef;
+        close($writefh) or die "close failed: $ERRNO";
+        my $msg = <$readfh>;
+        close($readfh) or die "close failed: $ERRNO";
+        waitpid($pid, 0) or die "waitpid failed: $ERRNO";
+        my $status = $CHILD_ERROR;
+        my $reason;
+        if ($status != 0) {
+            my $sig = $status & 0xFF;
+            if ($sig) {
+                $reason = "killed by signal $sig";
+                # TODO: use signal names
+            } else {
+                my $n = $status >> 8;
+                $reason = "exit code $n";
+            }
+        }
+        if (defined $reason) {
+            say "$mod: $reason";
+            if (length($msg) > 0) {
+                $msg =~ s/\n+$//;
+                $msg =~ s/^/| /mg;
+                say "$msg";
+                say '';
+            }
+        }
+    }
+}
+
+if (-t STDIN) {
+    say { *STDERR } "$PROGRAM_NAME: error: stdin is a tty";
+    exit(1);
+}
+
+while (<STDIN>) {
+    chomp;
+    my $path = $_;
+    my $mod = path2mod($path);
+    if (defined $mod) {
+        testmod($mod);
+    }
+}
+
+# vim:ts=4 sts=4 sw=4 et
