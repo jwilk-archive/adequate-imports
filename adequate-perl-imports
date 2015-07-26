@@ -54,6 +54,8 @@ sub testmod
         open(STDOUT, '>&', $writefh) or die "cannot redirect STDOUT: $ERRNO";
         open(STDERR, '>&', $writefh) or die "cannot redirect STDERR: $ERRNO";
         close($writefh) or die "close failed: $ERRNO";
+        # Fool DebConf into thinking it doesn't have to start a front-end:
+        local $ENV{DEBIAN_HAS_FRONTEND} = 1;
         eval("use $mod; 1");
         if ($@) {
             die $@;
