@@ -25,6 +25,7 @@ use warnings;
 
 use v5.14;
 
+use Config qw();
 use Cwd qw();
 use English qw(-no_match_vars);
 
@@ -40,6 +41,15 @@ sub path2mod
     m{^\w+(/\w+)*$} or return;
     s{/}{::}g;
     return $_;
+}
+
+my %signal_names;
+my $n = 0;
+for my $signame (split(' ', $Config::Config{sig_name})) {
+    if ($signame !~ /^(ZERO|UNUSED|NUM\d+)$/) {
+        $signal_names{$n} = "SIG$signame";
+    }
+    $n++;
 }
 
 sub testmod
@@ -73,8 +83,8 @@ sub testmod
         if ($status != 0) {
             my $sig = $status & 0xFF;
             if ($sig) {
-                $reason = "killed by signal $sig";
-                # TODO: use signal names
+                $sig = $signal_names{$sig} // "signal $sig";
+                $reason = "killed by $sig";
             } else {
                 my $n = $status >> 8;
                 $reason = "exit code $n";
