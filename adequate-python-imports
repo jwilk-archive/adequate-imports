@@ -137,7 +137,8 @@ def test_mod(mod):
         if status != 0:
             sig = status & 0xFF
             if sig:
-                reason = 'killed by {sig}'.format(sig=signal_names.get(sig, sig))
+                sig = signal_names.get(sig, 'signal {n}'.format(n=sig))
+                reason = 'killed by {sig}'.format(sig=sig)
             else:
                 n = (status >> 8)
                 if n == 1 and msg[-1].startswith(('ImportError: No module named ', 'ImportError: cannot import name ')):
