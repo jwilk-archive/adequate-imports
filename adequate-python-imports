@@ -30,7 +30,6 @@ import os
 import re
 import signal
 import sys
-import sysconfig
 
 sys_path = sorted(
     (p for p in sys.path if p.startswith('/')),
